@@ -5,8 +5,9 @@ import asyncio
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from datetime import datetime
 
-# Load environment variables from a .env file
+
 load_dotenv()
 
 # Get the bot token from the environment variables
@@ -26,6 +27,9 @@ if os.path.exists(BAD_WORDS_FILE):
 else:
     BAD_WORDS = []
 
+# Log file to store banned messages
+BANNED_MESSAGES_LOG = 'banned_messages.txt'
+
 # List of authorized user IDs
 AUTHORIZED_USERS = [717156736, 476191049, 139692499, 964755643]
 
@@ -34,21 +38,33 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text('Алена сказала что МАТ - это плохо!')
+    await update.message.reply_text('Алена сказала что МАТ - это Плохо!')
+
 
 async def detect_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text.lower()
     for bad_word in BAD_WORDS:
         if bad_word in message_text:
-            await update.message.reply_text(f"Лучше спроси у михалыча когда будет самса! 🥟 (симпл)")
+            user = update.message.from_user
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            # Log the message details in the banned_messages.txt file
+            with open(BANNED_MESSAGES_LOG, 'a', encoding='utf-8') as log_file:
+                log_file.write(
+                    f"{timestamp} - User: {user.username} (ID: {user.id}) - Banned Word: {bad_word} - Message: {update.message.text}\n")
+
+            # Send a warning message and delete the detected message
+            await update.message.reply_text(f"Лучше спроси у Михалыча когда будет CAMCA! 🥟 (димпл)")
             await context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
             return
+
 
 async def add_bad_word(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     if user_id not in AUTHORIZED_USERS:
-        await update.message.reply_text("Только Алена и Кнопка могут добавлять маты!")
+        await update.message.reply_text("Только Алена и Кнопка могут добавлять маты в общий список слов!")
         return
 
     word_to_add = context.args[0].lower() if context.args else None
@@ -62,6 +78,7 @@ async def add_bad_word(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     else:
         await update.message.reply_text("Необходимо указать слово для добавления. Использование: /addbadword <слово>")
 
+
 async def main() -> None:
     # Initialize the bot application with the bot token
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -74,9 +91,11 @@ async def main() -> None:
     await application.initialize()
     application.run_polling()  # This is a blocking call that will keep the bot running
 
+
 if __name__ == '__main__':
     try:
         import nest_asyncio
+
         nest_asyncio.apply()
         asyncio.run(main())
     except RuntimeError as e:
