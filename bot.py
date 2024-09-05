@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from datetime import datetime
+import re
 
 
 load_dotenv()
@@ -46,7 +47,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def detect_bad_words(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text.lower()
     for bad_word in BAD_WORDS:
-        if bad_word in message_text:
+        # Use regular expression to match whole words only
+        if re.search(rf'\b{re.escape(bad_word)}\b', message_text):
             user = update.message.from_user
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
